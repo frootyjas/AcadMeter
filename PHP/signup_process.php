@@ -1,13 +1,21 @@
 <?php
-// signup_process.php
 
-// Include the database connection file
+// Enable error reporting for debugging -to be removed once merged to main 
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
 include 'db_connection.php';
 
 // Check if the form is submitted
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     // Get user type
-    $userType = $_POST['userType'];  // admin, instructor, or student
+    $userType = isset($_POST['userType']) ? $_POST['userType'] : null;  // admin, instructor, or student
+
+    if (!$userType) {
+        echo "User type is missing.";
+        exit();
+    }
 
     // Common user data
     $username = $_POST['username_' . $userType];
@@ -27,6 +35,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     // Insert into users table
     $sql_user = "INSERT INTO users (username, password, email, user_type) VALUES (?, ?, ?, ?)";
     $stmt_user = $conn->prepare($sql_user);
+
+    if (!$stmt_user) {
+        echo "Error preparing user insert statement: " . $conn->error;
+        exit();
+    }
+
     $stmt_user->bind_param("ssss", $username, $passwordHash, $email, $userType);
 
     if ($stmt_user->execute()) {
@@ -43,6 +57,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
             $sql_specific = "INSERT INTO admins (user_id, name, employee_number, position, gender, date_of_birth) VALUES (?, ?, ?, ?, ?, ?)";
             $stmt_specific = $conn->prepare($sql_specific);
+
+            if (!$stmt_specific) {
+                echo "Error preparing admin insert statement: " . $conn->error;
+                exit();
+            }
+
             $stmt_specific->bind_param("isssss", $user_id, $name, $employee_number, $position, $gender, $dob);
         } elseif ($userType == 'instructor') {
             $name = $_POST['instructor_name'];
@@ -53,6 +73,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
             $sql_specific = "INSERT INTO instructors (user_id, name, employee_number, position, gender, date_of_birth) VALUES (?, ?, ?, ?, ?, ?)";
             $stmt_specific = $conn->prepare($sql_specific);
+
+            if (!$stmt_specific) {
+                echo "Error preparing instructor insert statement: " . $conn->error;
+                exit();
+            }
+
             $stmt_specific->bind_param("isssss", $user_id, $name, $employee_number, $position, $gender, $dob);
         } elseif ($userType == 'student') {
             $name = $_POST['student_name'];
@@ -63,6 +89,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
             $sql_specific = "INSERT INTO students (user_id, name, student_number, program, gender, date_of_birth) VALUES (?, ?, ?, ?, ?, ?)";
             $stmt_specific = $conn->prepare($sql_specific);
+
+            if (!$stmt_specific) {
+                echo "Error preparing student insert statement: " . $conn->error;
+                exit();
+            }
+
             $stmt_specific->bind_param("isssss", $user_id, $name, $student_number, $program, $gender, $dob);
         } else {
             echo "Invalid user type.";
@@ -72,13 +104,16 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         // Execute the insertion into the specific table
         if ($stmt_specific->execute()) {
             // Registration successful
+            echo "Registration successful!";
             header("Location: ../html/verifyAccount.html");
             exit();
         } else {
             echo "Error: " . $stmt_specific->error;
+            exit();
         }
     } else {
         echo "Error: " . $stmt_user->error;
+        exit();
     }
 
     // Close the statements and connection
@@ -89,5 +124,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $conn->close();
 } else {
     echo "Invalid request method.";
+    exit();
 }
 ?>
