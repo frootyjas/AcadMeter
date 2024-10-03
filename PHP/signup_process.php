@@ -1,25 +1,39 @@
 <?php
+// signup_process.php
+
 // Include the database connection file
 include 'db_connection.php';
 
 // Check if the form is submitted
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    // Get common user details
-    $username = $_POST['username_admin'] ?? $_POST['username_instructor'] ?? $_POST['username_student'];
-    $password = password_hash($_POST['password1_admin'] ?? $_POST['password1_instructor'] ?? $_POST['password1_student'], PASSWORD_BCRYPT);
-    $email = $_POST['email_admin'] ?? $_POST['email_instructor'] ?? $_POST['email_student'];
+    // Get user type
     $userType = $_POST['userType'];  // admin, instructor, or student
 
-    // Insert into the users table
-    $sql = "INSERT INTO users (username, password, email, user_type) VALUES (?, ?, ?, ?)";
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param("ssss", $username, $password, $email, $userType);
+    // Common user data
+    $username = $_POST['username_' . $userType];
+    $email = $_POST['email_' . $userType];
+    $password1 = $_POST['password1_' . $userType];
+    $password2 = $_POST['password2_' . $userType];
 
-    if ($stmt->execute()) {
+    // Validate passwords
+    if ($password1 !== $password2) {
+        echo "Passwords do not match.";
+        exit();
+    }
+
+    // Hash the password
+    $passwordHash = password_hash($password1, PASSWORD_BCRYPT);
+
+    // Insert into users table
+    $sql_user = "INSERT INTO users (username, password, email, user_type) VALUES (?, ?, ?, ?)";
+    $stmt_user = $conn->prepare($sql_user);
+    $stmt_user->bind_param("ssss", $username, $passwordHash, $email, $userType);
+
+    if ($stmt_user->execute()) {
         // Get the inserted user ID
-        $user_id = $stmt->insert_id;
+        $user_id = $stmt_user->insert_id;
 
-        // Insert into the specific table based on user type
+        // Prepare data for specific user type
         if ($userType == 'admin') {
             $name = $_POST['admin_name'];
             $employee_number = $_POST['admin_number'];
@@ -27,9 +41,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $gender = $_POST['gender_admin'];
             $dob = $_POST['date_of_birth_admin'];
 
-            $sql = "INSERT INTO admins (user_id, name, employee_number, position, gender, date_of_birth) VALUES (?, ?, ?, ?, ?, ?)";
-            $stmt = $conn->prepare($sql);
-            $stmt->bind_param("isssss", $user_id, $name, $employee_number, $position, $gender, $dob);
+            $sql_specific = "INSERT INTO admins (user_id, name, employee_number, position, gender, date_of_birth) VALUES (?, ?, ?, ?, ?, ?)";
+            $stmt_specific = $conn->prepare($sql_specific);
+            $stmt_specific->bind_param("isssss", $user_id, $name, $employee_number, $position, $gender, $dob);
         } elseif ($userType == 'instructor') {
             $name = $_POST['instructor_name'];
             $employee_number = $_POST['instructor_number'];
@@ -37,9 +51,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $gender = $_POST['gender_instructor'];
             $dob = $_POST['date_of_birth_instructor'];
 
-            $sql = "INSERT INTO instructors (user_id, name, employee_number, position, gender, date_of_birth) VALUES (?, ?, ?, ?, ?, ?)";
-            $stmt = $conn->prepare($sql);
-            $stmt->bind_param("isssss", $user_id, $name, $employee_number, $position, $gender, $dob);
+            $sql_specific = "INSERT INTO instructors (user_id, name, employee_number, position, gender, date_of_birth) VALUES (?, ?, ?, ?, ?, ?)";
+            $stmt_specific = $conn->prepare($sql_specific);
+            $stmt_specific->bind_param("isssss", $user_id, $name, $employee_number, $position, $gender, $dob);
         } elseif ($userType == 'student') {
             $name = $_POST['student_name'];
             $student_number = $_POST['student_number'];
@@ -47,26 +61,31 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $gender = $_POST['gender_student'];
             $dob = $_POST['date_of_birth_student'];
 
-            $sql = "INSERT INTO students (user_id, name, student_number, program, gender, date_of_birth) VALUES (?, ?, ?, ?, ?, ?)";
-            $stmt = $conn->prepare($sql);
-            $stmt->bind_param("isssss", $user_id, $name, $student_number, $program, $gender, $dob);
+            $sql_specific = "INSERT INTO students (user_id, name, student_number, program, gender, date_of_birth) VALUES (?, ?, ?, ?, ?, ?)";
+            $stmt_specific = $conn->prepare($sql_specific);
+            $stmt_specific->bind_param("isssss", $user_id, $name, $student_number, $program, $gender, $dob);
+        } else {
+            echo "Invalid user type.";
+            exit();
         }
 
         // Execute the insertion into the specific table
-        if ($stmt->execute()) {
-            echo "Registration successful!";
-            // Redirect to verification page
-            header("Location: verifyAccount.html");
+        if ($stmt_specific->execute()) {
+            // Registration successful
+            header("Location: ../html/verifyAccount.html");
             exit();
         } else {
-            echo "Error: " . $stmt->error;
+            echo "Error: " . $stmt_specific->error;
         }
     } else {
-        echo "Error: " . $stmt->error;
+        echo "Error: " . $stmt_user->error;
     }
 
-    // Close the statement and connection
-    $stmt->close();
+    // Close the statements and connection
+    $stmt_user->close();
+    if (isset($stmt_specific)) {
+        $stmt_specific->close();
+    }
     $conn->close();
 } else {
     echo "Invalid request method.";
