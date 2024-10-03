@@ -1,9 +1,11 @@
 <?php
+// db_connection.php
+
 // Database configuration
-$servername = "localhost";  // Hostname for the MySQL server, use 'localhost' if the database is hosted on the same server
-$username = "root";         // MySQL username, typically 'root' for local development
-$password = "";             // MySQL password, leave empty if no password is set for 'root'
-$dbname = "acadmeter";      // Name of the database to connect to
+$servername = "localhost";
+$username = "root";
+$password = "";
+$dbname = "acadmeter";
 
 // Create a new connection to the MySQL database
 $conn = new mysqli($servername, $username, $password, $dbname);
@@ -14,5 +16,8 @@ if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
 }
 
-// If the script reaches this point, the connection was successful
+// Enable error reporting for debugging 
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
 ?>
