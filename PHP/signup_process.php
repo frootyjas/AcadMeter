@@ -1,6 +1,6 @@
 <?php
 
-// Enable error reporting for debugging -to be removed once merged to main 
+// Enable error reporting for debugging -to be remove once merged to main 
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
