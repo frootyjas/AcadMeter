@@ -2,9 +2,14 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sign up</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Font Awesome CDN for icons -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"
+    />
+    <!-- Custom CSS -->
     <link rel="stylesheet" href="../css/signUp.css">
 </head>
 <body>
@@ -31,35 +36,29 @@
         <main> 
             <h1>Sign up as</h1>
             <div class="image-grid">
-                <div class="image-item">
-                    <a href="#" onclick="showSignUpForm('admin')">
-                        <img src="../assets/3.png" alt="Image 1">
-                        <p>Admin</p>
-                    </a>
+                <div class="image-item" onclick="showSignUpForm('admin')">
+                    <img src="../assets/3.png" alt="Admin">
+                    <p>Admin</p>
                 </div>
-                <div class="image-item">
-                    <a href="#" onclick="showSignUpForm('instructor')">
-                        <img src="../assets/4.png" alt="Image 4">
-                        <p>Instructor</p>
-                    </a>
+                <div class="image-item" onclick="showSignUpForm('instructor')">
+                    <img src="../assets/4.png" alt="Instructor">
+                    <p>Instructor</p>
                 </div> 
-                <div class="image-item">
-                    <a href="#" onclick="showSignUpForm('student')">
-                        <img src="../assets/2.png" alt="Image 4">
-                        <p>Student</p>
-                    </a>
-                </div>                
-            </div>
+                <div class="image-item" onclick="showSignUpForm('student')">
+                    <img src="../assets/2.png" alt="Student">
+                    <p>Student</p>
+                </div>
+            </div>            
             <div>
                 <h4>Already have an account? <a href="signIn.html">Sign in here.</a></h4>
             </div>
         </main>
     </div>
 
-    <div class="signup-form" id="adminFormContainer">
-        <label for="show" class="close-btn fas fa-times" title="close" onclick="hideSignupForm()"></label>
+    <div class="signup-form" id="adminFormContainer" style="display: none;">
+        <label class="close-btn fas fa-times" title="close" onclick="hideSignupForm()"></label>
         <div class="text">Sign up as Admin</div>
-        <form id="adminSignUpForm" method="POST" action="verifyAccount.html">
+        <form id="adminSignUpForm" method="POST" action="../PHP/signup_process.php">
             <input type="hidden" name="userType" value="admin">            
             <div class="form first">
                 <div class="details admin" id="admin-details">
@@ -83,8 +82,8 @@
                             <label for="admin-position">Position</label>
                             <select id="admin-position" name="admin_position" required>
                                 <option disabled selected>Select position</option>
-                                <option value="sample1">Sample 1</option>
-                                <option value="sample2">Sample 2</option>
+                                <option value="Position1">Position 1</option>
+                                <option value="Position2">Position 2</option>
                             </select>
                         </div>
                         <div class="input-field">
@@ -97,7 +96,7 @@
                         </div>
                         <div class="input-field">
                             <label for="date-of-birth-admin">Date of Birth</label>
-                            <input type="date" id="date-of-birth-admin" name="date_of_birth_admin" placeholder="Enter birth date" required>
+                            <input type="date" id="date-of-birth-admin" name="date_of_birth_admin" required>
                             <div class="error-message"></div>
                         </div>
                     </div>
@@ -118,7 +117,7 @@
                             <label for="password2-admin">Confirm Password</label>
                             <input id="password2-admin" name="password2_admin" type="password" placeholder="Confirm your password" required>
                         </div>
-                        <button type="submit" class="submit" name="register" formType="user">
+                        <button type="submit" class="submit" name="register">
                             <span class="btnText">Register</span>
                         </button>
                     </div>
@@ -126,11 +125,11 @@
             </div>
         </form>
     </div>
-    
-    <div class="signup-form" id="instructorFormContainer">
-        <label for="show" class="close-btn fas fa-times" title="close" onclick="hideSignupForm()"></label>
+
+    <div class="signup-form" id="instructorFormContainer" style="display: none;">
+        <label class="close-btn fas fa-times" title="close" onclick="hideSignupForm()"></label>
         <div class="text">Sign up as Instructor</div>
-        <form id="instructorSignUpForm" method="POST" action="verifyAccount.html">
+        <form id="instructorSignUpForm" method="POST" action="../PHP/signup_process.php">
             <input type="hidden" name="userType" value="instructor">            
             <div class="form first">
                 <div class="details instructor" id="instructor-details">
@@ -154,8 +153,8 @@
                             <label for="instructor-position">Position</label>
                             <select id="instructor-position" name="instructor_position" required>
                                 <option disabled selected>Select position</option>
-                                <option value="sample1">Sample 1</option>
-                                <option value="sample2">Sample 2</option>
+                                <option value="Position1">Position 1</option>
+                                <option value="Position2">Position 2</option>
                             </select>
                         </div>
                         <div class="input-field">
@@ -168,7 +167,7 @@
                         </div>
                         <div class="input-field">
                             <label for="date-of-birth-instructor">Date of Birth</label>
-                            <input type="date" id="date-of-birth-instructor" name="date_of_birth_instructor" placeholder="Enter birth date" required>
+                            <input type="date" id="date-of-birth-instructor" name="date_of_birth_instructor" required>
                             <div class="error-message"></div>
                         </div>
                     </div>
@@ -189,7 +188,7 @@
                             <label for="password2-instructor">Confirm Password</label>
                             <input id="password2-instructor" name="password2_instructor" type="password" placeholder="Confirm your password" required>
                         </div>
-                        <button type="submit" class="submit" name="register" formType="user">
+                        <button type="submit" class="submit" name="register">
                             <span class="btnText">Register</span>
                         </button>
                     </div>
@@ -198,10 +197,10 @@
         </form>
     </div>
 
-    <div class="signup-form" id="studentFormContainer">
-        <label for="show" class="close-btn fas fa-times" title="close" onclick="hideSignupForm()"></label>
+    <div class="signup-form" id="studentFormContainer" style="display: none;">
+        <label class="close-btn fas fa-times" title="close" onclick="hideSignupForm()"></label>
         <div class="text">Sign up as Student</div>
-        <form id="studentSignUpForm" method="POST" action="verifyAccount.html">
+        <form id="studentSignUpForm" method="POST" action="../PHP/signup_process.php">
             <input type="hidden" name="userType" value="student">            
             <div class="form first">
                 <div class="details student" id="student-details">
@@ -225,8 +224,8 @@
                             <label for="student-program">Program</label>
                             <select id="student-program" name="student_program" required>
                                 <option disabled selected>Select program</option>
-                                <option value="sample1">Sample 1</option>
-                                <option value="sample2">Sample 2</option>
+                                <option value="Program1">Program 1</option>
+                                <option value="Program2">Program 2</option>
                             </select>
                         </div>
                         <div class="input-field">
@@ -239,7 +238,7 @@
                         </div>
                         <div class="input-field">
                             <label for="date-of-birth-student">Date of Birth</label>
-                            <input type="date" id="date-of-birth-student" name="date_of_birth_student" placeholder="Enter birth date" required>
+                            <input type="date" id="date-of-birth-student" name="date_of_birth_student" required>
                             <div class="error-message"></div>
                         </div>
                     </div>
@@ -260,7 +259,7 @@
                             <label for="password2-student">Confirm Password</label>
                             <input id="password2-student" name="password2_student" type="password" placeholder="Confirm your password" required>
                         </div>
-                        <button type="submit" class="submit" name="register" formType="user">
+                        <button type="submit" class="submit" name="register">
                             <span class="btnText">Register</span>
                         </button>
                     </div>
@@ -268,7 +267,6 @@
             </div>
         </form>
     </div>
-
 
     <script src="../js/signUp.js"></script>
 </body>
