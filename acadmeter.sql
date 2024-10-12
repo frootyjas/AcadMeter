@@ -1,176 +1,115 @@
--- phpMyAdmin SQL Dump
--- version 5.2.1
--- https://www.phpmyadmin.net/
---
--- Host: 127.0.0.1
--- Generation Time: Oct 03, 2024 at 04:42 AM
--- Server version: 10.4.32-MariaDB
--- PHP Version: 8.2.12
+
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
 SET time_zone = "+00:00";
 
+CREATE TABLE `users` (
+  `user_id` int(11) NOT NULL AUTO_INCREMENT,
+  `username` varchar(50) NOT NULL,
+  `password` varchar(255) NOT NULL,
+  `email` varchar(100) NOT NULL,
+  `user_type` enum('Admin','Instructor','Student') NOT NULL,
+  `status` enum('Pending','Approved','Rejected') DEFAULT 'Pending',
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`user_id`),
+  UNIQUE KEY `username` (`username`),
+  UNIQUE KEY `email` (`email`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
-/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
-/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
-/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
-/*!40101 SET NAMES utf8mb4 */;
+CREATE TABLE `activity_logs` (
+  `log_id` int(11) NOT NULL AUTO_INCREMENT,
+  `user_id` int(11) NOT NULL,
+  `activity_type` enum('Login','Logout') NOT NULL,
+  `activity_timestamp` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`log_id`),
+  KEY `user_id` (`user_id`),
+  CONSTRAINT `activity_logs_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
---
--- Database: `acadmeter`
---
-
--- --------------------------------------------------------
-
---
--- Table structure for table `admins`
---
 
 CREATE TABLE `admins` (
-  `admin_id` int(11) NOT NULL,
+  `admin_id` int(11) NOT NULL AUTO_INCREMENT,
   `user_id` int(11) NOT NULL,
   `name` varchar(100) NOT NULL,
   `employee_number` varchar(20) NOT NULL,
   `position` varchar(50) NOT NULL,
   `gender` enum('Male','Female') NOT NULL,
-  `date_of_birth` date NOT NULL
+  `date_of_birth` date NOT NULL,
+  PRIMARY KEY (`admin_id`),
+  UNIQUE KEY `employee_number` (`employee_number`),
+  KEY `user_id` (`user_id`),
+  CONSTRAINT `admins_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- --------------------------------------------------------
 
---
--- Table structure for table `instructors`
---
+CREATE TABLE `feedback` (
+  `feedback_id` int(11) NOT NULL AUTO_INCREMENT,
+  `student_id` int(11) NOT NULL,
+  `instructor_id` int(11) NOT NULL,
+  `feedback_text` text NOT NULL,
+  `feedback_date` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`feedback_id`),
+  KEY `student_id` (`student_id`),
+  KEY `instructor_id` (`instructor_id`),
+  CONSTRAINT `feedback_ibfk_1` FOREIGN KEY (`student_id`) REFERENCES `students` (`student_id`) ON DELETE CASCADE,
+  CONSTRAINT `feedback_ibfk_2` FOREIGN KEY (`instructor_id`) REFERENCES `instructors` (`instructor_id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+
+CREATE TABLE `grades` (
+  `grade_id` int(11) NOT NULL AUTO_INCREMENT,
+  `student_id` int(11) NOT NULL,
+  `subject_id` int(11) NOT NULL,
+  `grade` float NOT NULL,
+  `grade_date` date NOT NULL,
+  PRIMARY KEY (`grade_id`),
+  KEY `student_id` (`student_id`),
+  KEY `subject_id` (`subject_id`),
+  CONSTRAINT `grades_ibfk_1` FOREIGN KEY (`student_id`) REFERENCES `students` (`student_id`) ON DELETE CASCADE,
+  CONSTRAINT `grades_ibfk_2` FOREIGN KEY (`subject_id`) REFERENCES `subjects` (`subject_id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
 
 CREATE TABLE `instructors` (
-  `instructor_id` int(11) NOT NULL,
+  `instructor_id` int(11) NOT NULL AUTO_INCREMENT,
   `user_id` int(11) NOT NULL,
   `name` varchar(100) NOT NULL,
   `employee_number` varchar(20) NOT NULL,
   `position` varchar(50) NOT NULL,
   `gender` enum('Male','Female') NOT NULL,
-  `date_of_birth` date NOT NULL
+  `date_of_birth` date NOT NULL,
+  PRIMARY KEY (`instructor_id`),
+  UNIQUE KEY `employee_number` (`employee_number`),
+  KEY `user_id` (`user_id`),
+  CONSTRAINT `instructors_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- --------------------------------------------------------
-
---
--- Table structure for table `students`
---
-
 CREATE TABLE `students` (
-  `student_id` int(11) NOT NULL,
+  `student_id` int(11) NOT NULL AUTO_INCREMENT,
   `user_id` int(11) NOT NULL,
   `name` varchar(100) NOT NULL,
   `student_number` varchar(20) NOT NULL,
   `program` varchar(50) NOT NULL,
   `gender` enum('Male','Female') NOT NULL,
-  `date_of_birth` date NOT NULL
+  `date_of_birth` date NOT NULL,
+  PRIMARY KEY (`student_id`),
+  UNIQUE KEY `student_number` (`student_number`),
+  KEY `user_id` (`user_id`),
+  CONSTRAINT `students_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- --------------------------------------------------------
 
---
--- Table structure for table `users`
---
-
-CREATE TABLE `users` (
-  `user_id` int(11) NOT NULL,
-  `username` varchar(50) NOT NULL,
-  `password` varchar(255) NOT NULL,
-  `email` varchar(100) NOT NULL,
-  `user_type` enum('Admin','Instructor','Student') NOT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+CREATE TABLE `subjects` (
+  `subject_id` int(11) NOT NULL AUTO_INCREMENT,
+  `instructor_id` int(11) NOT NULL,
+  `subject_name` varchar(100) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`subject_id`),
+  KEY `instructor_id` (`instructor_id`),
+  CONSTRAINT `subjects_ibfk_1` FOREIGN KEY (`instructor_id`) REFERENCES `instructors` (`instructor_id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
---
--- Indexes for dumped tables
---
 
---
--- Indexes for table `admins`
---
-ALTER TABLE `admins`
-  ADD PRIMARY KEY (`admin_id`),
-  ADD UNIQUE KEY `employee_number` (`employee_number`),
-  ADD KEY `user_id` (`user_id`);
 
---
--- Indexes for table `instructors`
---
-ALTER TABLE `instructors`
-  ADD PRIMARY KEY (`instructor_id`),
-  ADD UNIQUE KEY `employee_number` (`employee_number`),
-  ADD KEY `user_id` (`user_id`);
-
---
--- Indexes for table `students`
---
-ALTER TABLE `students`
-  ADD PRIMARY KEY (`student_id`),
-  ADD UNIQUE KEY `student_number` (`student_number`),
-  ADD KEY `user_id` (`user_id`);
-
---
--- Indexes for table `users`
---
-ALTER TABLE `users`
-  ADD PRIMARY KEY (`user_id`),
-  ADD UNIQUE KEY `username` (`username`),
-  ADD UNIQUE KEY `email` (`email`);
-
---
--- AUTO_INCREMENT for dumped tables
---
-
---
--- AUTO_INCREMENT for table `admins`
---
-ALTER TABLE `admins`
-  MODIFY `admin_id` int(11) NOT NULL AUTO_INCREMENT;
-
---
--- AUTO_INCREMENT for table `instructors`
---
-ALTER TABLE `instructors`
-  MODIFY `instructor_id` int(11) NOT NULL AUTO_INCREMENT;
-
---
--- AUTO_INCREMENT for table `students`
---
-ALTER TABLE `students`
-  MODIFY `student_id` int(11) NOT NULL AUTO_INCREMENT;
-
---
--- AUTO_INCREMENT for table `users`
---
-ALTER TABLE `users`
-  MODIFY `user_id` int(11) NOT NULL AUTO_INCREMENT;
-
---
--- Constraints for dumped tables
---
-
---
--- Constraints for table `admins`
---
-ALTER TABLE `admins`
-  ADD CONSTRAINT `admins_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE;
-
---
--- Constraints for table `instructors`
---
-ALTER TABLE `instructors`
-  ADD CONSTRAINT `instructors_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE;
-
---
--- Constraints for table `students`
---
-ALTER TABLE `students`
-  ADD CONSTRAINT `students_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE;
 COMMIT;
-
-/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
-/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
-/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
