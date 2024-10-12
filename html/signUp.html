@@ -50,9 +50,12 @@
         </main>
     </div>
 
+
     <div class="signup-form" id="adminFormContainer" style="display: none;">
         <label class="close-btn fas fa-times" title="close" onclick="hideSignupForm()"></label>
         <div class="text">Sign up as Admin</div>
+
+        <div id="adminError" class="error-message" style="color: red;"></div>
         <form id="adminSignUpForm" method="POST" action="../PHP/signup_process.php">
             <input type="hidden" name="userType" value="admin">            
             <div class="form first">
@@ -62,12 +65,10 @@
                         <div class="input-field">
                             <label for="admin-name">Last Name, First Name, Middle Name</label>
                             <input type="text" id="admin-name" name="admin_name" placeholder="Enter your name" required>
-                            <div id="admin-name-error" class="error-message"></div>
                         </div>
                         <div class="input-field">
                             <label for="admin-number">Employee Number</label>
                             <input type="text" id="admin-number" name="admin_number" placeholder="Enter your employee number" required>
-                            <div id="admin-number-error" class="error-message"></div>
                         </div>
                         <div class="input-field">
                             <label for="email-admin">Email</label>
@@ -92,7 +93,6 @@
                         <div class="input-field">
                             <label for="date-of-birth-admin">Date of Birth</label>
                             <input type="date" id="date-of-birth-admin" name="date_of_birth_admin" required>
-                            <div class="error-message"></div>
                         </div>
                     </div>
                 </div>
@@ -124,6 +124,8 @@
     <div class="signup-form" id="instructorFormContainer" style="display: none;">
         <label class="close-btn fas fa-times" title="close" onclick="hideSignupForm()"></label>
         <div class="text">Sign up as Instructor</div>
+
+        <div id="instructorError" class="error-message" style="color: red;"></div>
         <form id="instructorSignUpForm" method="POST" action="../PHP/signup_process.php">
             <input type="hidden" name="userType" value="instructor">            
             <div class="form first">
@@ -133,12 +135,10 @@
                         <div class="input-field">
                             <label for="instructor-name">Last Name, First Name, Middle Name</label>
                             <input type="text" id="instructor-name" name="instructor_name" placeholder="Enter your name" required>
-                            <div id="instructor-name-error" class="error-message"></div>
                         </div>
                         <div class="input-field">
                             <label for="instructor-number">Employee Number</label>
                             <input type="text" id="instructor-number" name="instructor_number" placeholder="Enter your employee number" required>
-                            <div id="instructor-number-error" class="error-message"></div>
                         </div>
                         <div class="input-field">
                             <label for="email-instructor">Email</label>
@@ -163,7 +163,6 @@
                         <div class="input-field">
                             <label for="date-of-birth-instructor">Date of Birth</label>
                             <input type="date" id="date-of-birth-instructor" name="date_of_birth_instructor" required>
-                            <div class="error-message"></div>
                         </div>
                     </div>
                 </div>
@@ -195,6 +194,8 @@
     <div class="signup-form" id="studentFormContainer" style="display: none;">
         <label class="close-btn fas fa-times" title="close" onclick="hideSignupForm()"></label>
         <div class="text">Sign up as Student</div>
+
+        <div id="studentError" class="error-message" style="color: red;"></div>
         <form id="studentSignUpForm" method="POST" action="../PHP/signup_process.php">
             <input type="hidden" name="userType" value="student">            
             <div class="form first">
@@ -204,12 +205,10 @@
                         <div class="input-field">
                             <label for="student-name">Last Name, First Name, Middle Name</label>
                             <input type="text" id="student-name" name="student_name" placeholder="Enter your name" required>
-                            <div id="student-name-error" class="error-message"></div>
                         </div>
                         <div class="input-field">
                             <label for="student-number">Student Number</label>
                             <input type="text" id="student-number" name="student_number" placeholder="Enter your student number" required>
-                            <div id="student-number-error" class="error-message"></div>
                         </div>
                         <div class="input-field">
                             <label for="email-student">Email</label>
@@ -234,7 +233,6 @@
                         <div class="input-field">
                             <label for="date-of-birth-student">Date of Birth</label>
                             <input type="date" id="date-of-birth-student" name="date_of_birth_student" required>
-                            <div class="error-message"></div>
                         </div>
                     </div>
                 </div>
