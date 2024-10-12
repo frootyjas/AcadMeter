@@ -1,19 +1,22 @@
 <?php
-
-// Enable error reporting for debugging -to be remove once merged to main 
+// error reporting (to be remove in main branch)
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
 include 'db_connection.php';
+header('Content-Type: application/json');
 
-// Check if the form is submitted
+$response = ["status" => "", "message" => ""];
+
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     // Get user type
-    $userType = isset($_POST['userType']) ? $_POST['userType'] : null;  // admin, instructor, or student
+    $userType = isset($_POST['userType']) ? $_POST['userType'] : null;
 
     if (!$userType) {
-        echo "User type is missing.";
+        $response["status"] = "error";
+        $response["message"] = "User type is missing.";
+        echo json_encode($response);
         exit();
     }
 
@@ -25,7 +28,32 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
     // Validate passwords
     if ($password1 !== $password2) {
-        echo "Passwords do not match.";
+        $response["status"] = "error";
+        $response["message"] = "Passwords do not match.";
+        echo json_encode($response);
+        exit();
+    }
+
+    // Check for duplicate username or email
+    $sql_check = "SELECT * FROM users WHERE username = ? OR email = ?";
+    $stmt_check = $conn->prepare($sql_check);
+
+    if (!$stmt_check) {
+        $response["status"] = "error";
+        $response["message"] = "Error preparing duplicate check statement: " . $conn->error;
+        echo json_encode($response);
+        exit();
+    }
+
+    $stmt_check->bind_param("ss", $username, $email);
+    $stmt_check->execute();
+    $result = $stmt_check->get_result();
+
+    if ($result->num_rows > 0) {
+        // Duplicate found
+        $response["status"] = "error";
+        $response["message"] = "Username or Email already exists. Please choose a different one.";
+        echo json_encode($response);
         exit();
     }
 
@@ -37,17 +65,18 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $stmt_user = $conn->prepare($sql_user);
 
     if (!$stmt_user) {
-        echo "Error preparing user insert statement: " . $conn->error;
+        $response["status"] = "error";
+        $response["message"] = "Error preparing user insert statement: " . $conn->error;
+        echo json_encode($response);
         exit();
     }
 
     $stmt_user->bind_param("ssss", $username, $passwordHash, $email, $userType);
 
     if ($stmt_user->execute()) {
-        // Get the inserted user ID
+        // Handle specific user type data (e.g., admin, instructor, student)
         $user_id = $stmt_user->insert_id;
 
-        // Prepare data for specific user type
         if ($userType == 'admin') {
             $name = $_POST['admin_name'];
             $employee_number = $_POST['admin_number'];
@@ -59,7 +88,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $stmt_specific = $conn->prepare($sql_specific);
 
             if (!$stmt_specific) {
-                echo "Error preparing admin insert statement: " . $conn->error;
+                $response["status"] = "error";
+                $response["message"] = "Error preparing admin insert statement: " . $conn->error;
+                echo json_encode($response);
                 exit();
             }
 
@@ -75,7 +106,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $stmt_specific = $conn->prepare($sql_specific);
 
             if (!$stmt_specific) {
-                echo "Error preparing instructor insert statement: " . $conn->error;
+                $response["status"] = "error";
+                $response["message"] = "Error preparing instructor insert statement: " . $conn->error;
+                echo json_encode($response);
                 exit();
             }
 
@@ -91,39 +124,50 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $stmt_specific = $conn->prepare($sql_specific);
 
             if (!$stmt_specific) {
-                echo "Error preparing student insert statement: " . $conn->error;
+                $response["status"] = "error";
+                $response["message"] = "Error preparing student insert statement: " . $conn->error;
+                echo json_encode($response);
                 exit();
             }
 
             $stmt_specific->bind_param("isssss", $user_id, $name, $student_number, $program, $gender, $dob);
         } else {
-            echo "Invalid user type.";
+            $response["status"] = "error";
+            $response["message"] = "Invalid user type.";
+            echo json_encode($response);
             exit();
         }
 
         // Execute the insertion into the specific table
         if ($stmt_specific->execute()) {
             // Registration successful
-            echo "Registration successful!";
-            header("Location: ../html/verifyAccount.html");
+            $response["status"] = "success";
+            $response["message"] = "Registration successful!";
+            echo json_encode($response);
             exit();
         } else {
-            echo "Error: " . $stmt_specific->error;
+            $response["status"] = "error";
+            $response["message"] = "Error: " . $stmt_specific->error;
+            echo json_encode($response);
             exit();
         }
     } else {
-        echo "Error: " . $stmt_user->error;
+        $response["status"] = "error";
+        $response["message"] = "Error: " . $stmt_user->error;
+        echo json_encode($response);
         exit();
     }
 
-    // Close the statements and connection
+    // Close statements and connection
+    $stmt_check->close();
     $stmt_user->close();
     if (isset($stmt_specific)) {
         $stmt_specific->close();
     }
     $conn->close();
 } else {
-    echo "Invalid request method.";
+    $response["status"] = "error";
+    $response["message"] = "Invalid request method.";
+    echo json_encode($response);
     exit();
 }
-?>
