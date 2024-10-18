@@ -3,14 +3,7 @@ session_start();
 header('Content-Type: application/json');
 
 // Include the database connection with the correct path
-include '../PHP/db_connection.php';  // Adjusted path based on your file structure
-
-// Enable full error reporting for debugging
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
-
-$response = ["status" => "", "message" => ""];
+include '../PHP/db_connection.php';  
 
 // Enable full error reporting for debugging
 ini_set('display_errors', 1);
@@ -90,6 +83,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
         // Verify the password
         if (password_verify($password, $user['password'])) {
+            // Debugging: Log successful password verification
+            file_put_contents('debug_log.txt', "Password verified successfully.\n", FILE_APPEND);
+
             // Password is correct, create session
             $_SESSION['user_id'] = $user['user_id'];
             $_SESSION['username'] = $user['username'];
