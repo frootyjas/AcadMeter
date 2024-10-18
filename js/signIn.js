@@ -1,5 +1,6 @@
 function handleSubmit(event) {
     event.preventDefault();  // Prevent the default form submission
+    console.log('Form submission triggered');  // Test
 
     const username = document.getElementById('username').value;
     const password = document.getElementById('password').value;
@@ -17,7 +18,7 @@ function handleSubmit(event) {
     formData.append('userType', userType);
 
     // Send data to the login_process.php using fetch
-    fetch('../html/login_process.php', {
+    fetch('../PHP/login_process.php', {
         method: 'POST',
         body: formData
     })
@@ -26,7 +27,7 @@ function handleSubmit(event) {
         if (data.status === 'success') {
             // Redirect based on user type
             if (userType === 'Admin') {
-                window.location.href = 'admin_dashboard.php';  // Redirect to Admin Dashboard
+                window.location.href = '../PHP/admin_dashboard.php';  // Redirect to Admin Dashboard
             } else if (userType === 'Instructor') {
                 window.location.href = 'instructor_dashboard.php';  // Redirect to Instructor Dashboard
             } else {
