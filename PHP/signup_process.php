@@ -159,13 +159,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 $mail->isSMTP();
                 $mail->Host = 'smtp.gmail.com';
                 $mail->SMTPAuth = true;
-                $mail->Username = 'justinmarlosibonga@gmail.com'; 
-                $mail->Password = 'mvnhppaolniedhvv'; // Your Gmail App password
+                $mail->Username = '';  // Your Gmail 
+                $mail->Password = ''; // Your Gmail App password
                 $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
                 $mail->Port = 587;
 
                 // Recipients
-                $mail->setFrom('justinmarlosibonga@gmail.com', 'AcadMeter Team');
+                $mail->setFrom('youremail@gmail.com', 'AcadMeter Team');
                 $mail->addAddress($email); // Send the email to the user's email address
 
                 // Content
