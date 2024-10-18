@@ -1,10 +1,18 @@
 <?php
-// error reporting (to be remove in main branch)
+// error reporting (to be removed in main branch)
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
 include 'db_connection.php';
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception;
+
+// change the address to the local address for testing
+require 'C:/xampp/htdocs/AcadMeter/PHPMailer-master/src/Exception.php';
+require 'C:/xampp/htdocs/AcadMeter/PHPMailer-master/src/PHPMailer.php';
+require 'C:/xampp/htdocs/AcadMeter/PHPMailer-master/src/SMTP.php';
+
 header('Content-Type: application/json');
 
 $response = ["status" => "", "message" => ""];
@@ -60,8 +68,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     // Hash the password
     $passwordHash = password_hash($password1, PASSWORD_BCRYPT);
 
+    // Generate a verification code
+    $verification_code = bin2hex(random_bytes(16));  // Generate a random verification code
+    $verified = 0;  // User is not verified initially
+
     // Insert into users table
-    $sql_user = "INSERT INTO users (username, password, email, user_type) VALUES (?, ?, ?, ?)";
+    $sql_user = "INSERT INTO users (username, password, email, user_type, verification_code, verified) VALUES (?, ?, ?, ?, ?, ?)";
     $stmt_user = $conn->prepare($sql_user);
 
     if (!$stmt_user) {
@@ -71,7 +83,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         exit();
     }
 
-    $stmt_user->bind_param("ssss", $username, $passwordHash, $email, $userType);
+    $stmt_user->bind_param("sssssi", $username, $passwordHash, $email, $userType, $verification_code, $verified);
 
     if ($stmt_user->execute()) {
         // Handle specific user type data (e.g., admin, instructor, student)
@@ -140,9 +152,36 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
         // Execute the insertion into the specific table
         if ($stmt_specific->execute()) {
-            // Registration successful
-            $response["status"] = "success";
-            $response["message"] = "Registration successful!";
+            // Send verification email using PHPMailer
+            $mail = new PHPMailer(true);
+            try {
+                // Server settings
+                $mail->isSMTP();
+                $mail->Host = 'smtp.gmail.com';
+                $mail->SMTPAuth = true;
+                $mail->Username = 'justinmarlosibonga@gmail.com'; 
+                $mail->Password = 'mvnhppaolniedhvv'; // Your Gmail App password
+                $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+                $mail->Port = 587;
+
+                // Recipients
+                $mail->setFrom('justinmarlosibonga@gmail.com', 'AcadMeter Team');
+                $mail->addAddress($email); // Send the email to the user's email address
+
+                // Content
+                $mail->isHTML(true);
+                $mail->Subject = 'Email Verification';
+                $mail->Body    = "Hi $name,<br><br>Thank you for registering. 
+                                  Please click the link below to verify your email:<br>
+                                  <a href='http://localhost/AcadMeter/verify.php?code=$verification_code'>Verify Email</a><br><br>Thanks!<br>AcadMeter Team";
+
+                $mail->send();
+                $response["status"] = "success";
+                $response["message"] = "Registration successful! A verification email has been sent to your email address.";
+            } catch (Exception $e) {
+                $response["status"] = "error";
+                $response["message"] = "Message could not be sent. Mailer Error: {$mail->ErrorInfo}";
+            }
             echo json_encode($response);
             exit();
         } else {
