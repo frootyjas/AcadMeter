@@ -20,10 +20,9 @@ function hideSignupForm() {
     clearErrorMessage('studentError');
 }
 
-
 document.addEventListener('DOMContentLoaded', hideSignupForm);
 
-// Add event listeners to handle form submission with fetch
+//event listeners to handle form submission with fetch
 document.getElementById('adminSignUpForm').addEventListener('submit', handleFormSubmission);
 document.getElementById('studentSignUpForm').addEventListener('submit', handleFormSubmission);
 document.getElementById('instructorSignUpForm').addEventListener('submit', handleFormSubmission);
