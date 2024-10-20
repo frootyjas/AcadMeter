@@ -9,16 +9,63 @@
 <body>
     <div class="container">
         <h1>Verify your Account</h1>
-        <form action="signIn.html" method="get">
+        <p>We've sent a one-time password to your email. Type it below to continue.</p>
+        <form id="verificationForm" onsubmit="handleVerification(event)">
             <div class="data">
-                <label for="verification-code">We've sent a one-time password in your email. Type it below to continue.</label>
+                <label for="verification-code">Enter your verification code:</label>
                 <input type="text" id="verification-code" name="verification_code" placeholder="Enter your verification code" required>
                 <div id="verification-code-error" class="error-message"></div>
             </div>
             <button type="submit" class="submit">
                 <span class="btnText">Verify</span>
             </button>
+            <div id="responseMessage" class="text-center mt-3"></div>
+            
+            <a id="goHomeButton" href="/AcadMeter/html/signIn.html" style="display:none;" class="btn btn-primary mt-3">Go Back to Sign In</a>
         </form>
     </div>
+
+    <script>
+        function handleVerification(event) {
+            event.preventDefault();  
+
+            const verificationCode = document.getElementById('verification-code').value;
+            const responseMessage = document.getElementById('responseMessage');
+            const errorMessage = document.getElementById('verification-code-error');
+            const goHomeButton = document.getElementById('goHomeButton');
+
+            if (!verificationCode) {
+                errorMessage.textContent = "Please enter your verification code.";
+                return;
+            }
+
+            
+            errorMessage.textContent = "";
+            responseMessage.textContent = "";
+            goHomeButton.style.display = "none"; /
+
+            
+            fetch('../PHP/verifyAccount.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ verification_code: verificationCode })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    responseMessage.innerHTML = `<span class="text-success">${data.message}</span>`;
+                    goHomeButton.style.display = "block";  
+                } else {
+                    responseMessage.innerHTML = `<span class="text-danger">${data.message}</span>`;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                responseMessage.innerHTML = '<span class="text-danger">An error occurred. Please try again later.</span>';
+            });
+        }
+    </script>
 </body>
 </html>
