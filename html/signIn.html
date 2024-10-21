@@ -63,6 +63,7 @@
         </div>
     </div>
 
+    <!-- Forgot Password Modal -->
     <div class="modal fade" id="forgotPasswordModal" tabindex="-1" aria-labelledby="forgotPasswordModalLabel" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -73,13 +74,14 @@
                     </button>
                 </div>
                 <div class="modal-body">
-                    <form>
+                    <form id="forgotPasswordForm" onsubmit="handleForgotPassword(event)">
                         <div class="form-group">
                             <label for="resetEmail">Enter your email address</label>
                             <input type="email" class="form-control" id="resetEmail" placeholder="Email address">
                         </div>
                         <button type="submit" class="btn btn-primary">Reset Password</button>
                     </form>
+                    <div id="forgotPasswordMessage" style="color: red; margin-top: 10px;"></div>
                 </div>
             </div>
         </div>
