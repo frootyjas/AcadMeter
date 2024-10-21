@@ -1,3 +1,4 @@
+// Function to handle form submission (Login)
 function handleSubmit(event) {
     event.preventDefault();  // Prevent the default form submission
     console.log('Form submission triggered');  // Debugging log
@@ -86,6 +87,45 @@ function handleForgotPassword(event) {
     .catch(error => {
         console.error('Error during forgot password:', error);
         const messageContainer = document.getElementById('forgotPasswordMessage');
+        messageContainer.style.color = 'red';
+        messageContainer.textContent = "Something went wrong. Please try again.";
+    });
+}
+
+// Function to handle forgot username submission
+function handleForgotUsername(event) {
+    event.preventDefault();  // Prevent default form submission
+    console.log('Forgot Username triggered');  // Debugging log
+
+    const email = document.getElementById('usernameEmail').value.trim();
+
+    if (!email) {
+        alert("Please enter your email address.");
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('usernameEmail', email);
+
+    // Send the forgot username request to the server
+    fetch('../PHP/forgot_username_process.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        const messageContainer = document.getElementById('forgotUsernameMessage');
+        if (data.status === 'success') {
+            messageContainer.style.color = 'green';
+            messageContainer.textContent = `Your username has been sent to ${email}.`;
+        } else {
+            messageContainer.style.color = 'red';
+            messageContainer.textContent = data.message;
+        }
+    })
+    .catch(error => {
+        console.error('Error during forgot username:', error);
+        const messageContainer = document.getElementById('forgotUsernameMessage');
         messageContainer.style.color = 'red';
         messageContainer.textContent = "Something went wrong. Please try again.";
     });
