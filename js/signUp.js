@@ -22,7 +22,7 @@ function hideSignupForm() {
 
 document.addEventListener('DOMContentLoaded', hideSignupForm);
 
-//event listeners to handle form submission with fetch
+// Event listeners to handle form submission with fetch
 document.getElementById('adminSignUpForm').addEventListener('submit', handleFormSubmission);
 document.getElementById('studentSignUpForm').addEventListener('submit', handleFormSubmission);
 document.getElementById('instructorSignUpForm').addEventListener('submit', handleFormSubmission);
@@ -34,7 +34,6 @@ function handleFormSubmission(event) {
     const formData = new FormData(form);
     let errorContainerId;
 
-    
     if (form.id === 'adminSignUpForm') {
         errorContainerId = 'adminError';
     } else if (form.id === 'studentSignUpForm') {
@@ -52,7 +51,8 @@ function handleFormSubmission(event) {
         if (data.status === 'error') {
             displayErrorMessage(errorContainerId, data.message);
         } else if (data.status === 'success') {
-            window.location.href = '../html/verifyAccount.html';
+            // Updated line to use data.redirect
+            window.location.href = data.redirect;
         }
     })
     .catch(error => {
