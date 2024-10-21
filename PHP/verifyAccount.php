@@ -2,27 +2,30 @@
 // Include database connection
 include 'db_connection.php';
 
+header('Content-Type: application/json');
+
 $response = ["status" => "", "message" => ""];
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     // Get JSON data from the request body
     $data = json_decode(file_get_contents('php://input'), true);
+    $email = isset($data['email']) ? trim($data['email']) : '';
     $verification_code = isset($data['verification_code']) ? trim($data['verification_code']) : '';
 
     // Debug log to see what verification code is being received
-    file_put_contents('debug_log.txt', "Verification Code Received: {$verification_code}\n", FILE_APPEND);
+    file_put_contents('debug_log.txt', "Email: {$email}, Verification Code Received: {$verification_code}\n", FILE_APPEND);
 
-    // Check if verification code is missing
-    if (empty($verification_code)) {
-        file_put_contents('debug_log.txt', "No verification code provided.\n", FILE_APPEND);
+    // Check if email or verification code is missing
+    if (empty($email) || empty($verification_code)) {
+        file_put_contents('debug_log.txt', "Email or verification code missing.\n", FILE_APPEND);
         $response["status"] = "error";
-        $response["message"] = "Verification code is missing.";
+        $response["message"] = "Email and verification code are required.";
         echo json_encode($response);
         exit();
     }
 
-    // Query to check if the verification code is valid and the account is not yet verified
-    $sql = "SELECT otp_code, verified FROM users WHERE otp_code = ? AND verified = 0";
+    // Query to check if the verification code and email match in pending_users
+    $sql = "SELECT * FROM pending_users WHERE email = ? AND verification_code = ?";
     $stmt = $conn->prepare($sql);
 
     if (!$stmt) {
@@ -32,48 +35,104 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         exit();
     }
 
-    $stmt->bind_param("i", $verification_code);
+    $stmt->bind_param("ss", $email, $verification_code);
     $stmt->execute();
     $result = $stmt->get_result();
 
-    // Log the number of rows and the fetched OTP
-    file_put_contents('debug_log.txt', "About to execute query with verification code: {$verification_code}\n", FILE_APPEND);
+    // Log the number of rows found
     file_put_contents('debug_log.txt', "Number of rows found: {$result->num_rows}\n", FILE_APPEND);
 
-    if ($result->num_rows > 0) {
-        $user = $result->fetch_assoc();
-        file_put_contents('debug_log.txt', "Fetched OTP: {$user['otp_code']}, Verified Status: {$user['verified']}\n", FILE_APPEND);
+    if ($result->num_rows === 1) {
+        $pending_user = $result->fetch_assoc();
+        file_put_contents('debug_log.txt', "Pending user found: " . print_r($pending_user, true) . "\n", FILE_APPEND);
 
-        // OTP is correct, update the user's verified status to 1 and status to pending
-        $sql_update = "UPDATE users SET verified = 1, status = 'pending' WHERE otp_code = ?";
-        $stmt_update = $conn->prepare($sql_update);
+        // Begin transaction
+        $conn->begin_transaction();
 
-        if (!$stmt_update) {
-            $response["status"] = "error";
-            $response["message"] = "Error preparing update statement: " . $conn->error;
-            echo json_encode($response);
-            exit();
-        }
+        try {
+            // Insert into users table
+            $sql_insert_user = "INSERT INTO users (username, password, email, user_type, verification_code, verified, approved) VALUES (?, ?, ?, ?, ?, ?, ?)";
+            $stmt_insert_user = $conn->prepare($sql_insert_user);
 
-        $stmt_update->bind_param("i", $verification_code);
+            if (!$stmt_insert_user) {
+                throw new Exception("Error preparing user insert statement: " . $conn->error);
+            }
 
-        if ($stmt_update->execute()) {
-            // After success, display message with a "Go Home" button
+            $verified = 1;  // Now verified
+            $approved = 0;  // Still needs admin approval
+
+            $stmt_insert_user->bind_param(
+                "sssssii",
+                $pending_user['username'],
+                $pending_user['password'],
+                $pending_user['email'],
+                $pending_user['user_type'],
+                $pending_user['verification_code'],
+                $verified,
+                $approved
+            );
+
+            $stmt_insert_user->execute();
+            $user_id = $stmt_insert_user->insert_id;
+
+            // Insert into specific user type table
+            if ($pending_user['user_type'] == 'admin') {
+                $sql_specific = "INSERT INTO admins (user_id, name, employee_number, position, gender, date_of_birth) VALUES (?, ?, ?, ?, ?, ?)";
+            } elseif ($pending_user['user_type'] == 'instructor') {
+                $sql_specific = "INSERT INTO instructors (user_id, name, employee_number, position, gender, date_of_birth) VALUES (?, ?, ?, ?, ?, ?)";
+            } elseif ($pending_user['user_type'] == 'student') {
+                $sql_specific = "INSERT INTO students (user_id, name, student_number, program, gender, date_of_birth) VALUES (?, ?, ?, ?, ?, ?)";
+            } else {
+                throw new Exception("Invalid user type.");
+            }
+
+            $stmt_specific = $conn->prepare($sql_specific);
+
+            if (!$stmt_specific) {
+                throw new Exception("Error preparing specific user insert statement: " . $conn->error);
+            }
+
+            $stmt_specific->bind_param(
+                "isssss",
+                $user_id,
+                $pending_user['name'],
+                $pending_user['number'],
+                $pending_user['position_program'],
+                $pending_user['gender'],
+                $pending_user['date_of_birth']
+            );
+
+            $stmt_specific->execute();
+
+            // Delete from pending_users table
+            $sql_delete_pending = "DELETE FROM pending_users WHERE pending_user_id = ?";
+            $stmt_delete_pending = $conn->prepare($sql_delete_pending);
+
+            if (!$stmt_delete_pending) {
+                throw new Exception("Error preparing delete statement: " . $conn->error);
+            }
+
+            $stmt_delete_pending->bind_param("i", $pending_user['pending_user_id']);
+            $stmt_delete_pending->execute();
+
+            // Commit transaction
+            $conn->commit();
+
             echo json_encode([
                 "status" => "success",
                 "message" => "Your email has been successfully verified! Your account is now pending approval by the admin.",
                 "showGoHomeButton" => true // Add this key to trigger the button on the frontend
             ]);
-        } else {
+        } catch (Exception $e) {
+            $conn->rollback();
             $response["status"] = "error";
-            $response["message"] = "Error updating verification status.";
+            $response["message"] = $e->getMessage();
             echo json_encode($response);
         }
 
-        $stmt_update->close();
     } else {
         $response["status"] = "error";
-        $response["message"] = "Invalid verification code or the account is already verified.";
+        $response["message"] = "Invalid verification code or email.";
         echo json_encode($response);
     }
 
