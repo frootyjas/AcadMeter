@@ -1,11 +1,15 @@
 <?php
-session_start();
+// Start the session at the very beginning
+if (session_status() == PHP_SESSION_NONE) {
+    session_start();
+}
+
 header('Content-Type: application/json');
 
 // Include the database connection with the correct path
 include '../PHP/db_connection.php';  
 
-// Enable full error reporting for debugging
+// Enable full error reporting for debugging (remove or adjust in production)
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
@@ -16,7 +20,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     // Get the username, password, and userType from the POST request
     $username = trim($_POST['username']);
     $password = trim($_POST['password']);
-    $userType = $_POST['userType'];
+    $userType = strtolower(trim($_POST['userType']));
 
     // Validate input
     if (empty($username) || empty($password)) {
@@ -26,24 +30,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         exit();
     }
 
-    // Debugging: Log received username and userType
-    file_put_contents('debug_log.txt', "Received Username: $username, UserType: $userType\n", FILE_APPEND);
-
-    // Check database connection
-    if ($conn->connect_error) {
-        $response["status"] = "error";
-        $response["message"] = "Database connection failed: " . $conn->connect_error;
-        echo json_encode($response);
-        exit();
-    }
-
     // Prepare SQL query to fetch user based on username or email
-    $sql = "SELECT * FROM users WHERE (username = ? OR email = ?) AND LOWER(user_type) = LOWER(?)";
+    $sql = "SELECT * FROM users WHERE (username = ? OR email = ?) AND LOWER(user_type) = ?";
     $stmt = $conn->prepare($sql);
 
-    // Debugging: Log query preparation
     if ($stmt === false) {
-        file_put_contents('debug_log.txt', "SQL preparation failed: " . $conn->error . "\n", FILE_APPEND);
         $response["status"] = "error";
         $response["message"] = "SQL preparation failed: " . $conn->error;
         echo json_encode($response);
@@ -53,61 +44,69 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     // Bind parameters and execute the query
     $stmt->bind_param("sss", $username, $username, $userType);
 
-    // Debugging: Log before executing the query
-    file_put_contents('debug_log.txt', "About to execute query: SELECT * FROM users WHERE (username = '$username' OR email = '$username') AND LOWER(user_type) = LOWER('$userType')\n", FILE_APPEND);
-
     if (!$stmt->execute()) {
-        // Log if query execution fails
-        file_put_contents('debug_log.txt', "Query execution failed: " . $stmt->error . "\n", FILE_APPEND);
         $response["status"] = "error";
         $response["message"] = "Query execution failed: " . $stmt->error;
         echo json_encode($response);
         exit();
     }
 
-    // Debugging: Log query execution success
-    file_put_contents('debug_log.txt', "Query executed successfully.\n", FILE_APPEND);
-
     // Get the query result
     $result = $stmt->get_result();
-
-    // Debugging: Log the number of rows returned
-    file_put_contents('debug_log.txt', "Result num_rows: " . $result->num_rows . "\n", FILE_APPEND);
 
     if ($result->num_rows === 1) {
         // Fetch user data
         $user = $result->fetch_assoc();
 
-        // Debugging: Log the fetched user data
-        file_put_contents('debug_log.txt', "Fetched User Data: " . print_r($user, true) . "\n", FILE_APPEND);
-
         // Verify the password
         if (password_verify($password, $user['password'])) {
-            // Debugging: Log successful password verification
-            file_put_contents('debug_log.txt', "Password verified successfully.\n", FILE_APPEND);
+            // Check if the user is verified and approved
+            if ($user['verified'] == 1 && $user['approved'] == 1) {
+                // Password is correct and user is verified and approved, create session
+                $_SESSION['user_id'] = $user['user_id'];
+                $_SESSION['username'] = $user['username'];
+                $_SESSION['user_type'] = strtolower($user['user_type']);
 
-            // Password is correct, create session
-            $_SESSION['user_id'] = $user['user_id'];
-            $_SESSION['username'] = $user['username'];
-            $_SESSION['user_type'] = $user['user_type'];
+                // Regenerate session ID for security
+                session_regenerate_id(true);
 
-            // Regenerate session ID for security
-            session_regenerate_id(true);
+                // Set success response
+                $response["status"] = "success";
+                $response["message"] = "Login successful!";
 
-            // Set success response
-            $response["status"] = "success";
-            $response["message"] = "Login successful!";
+                // Set redirect URL based on user type
+                if ($_SESSION['user_type'] === 'admin') {
+                    $response["redirect"] = "/AcadMeter/php/admin_dashboard.php"; // Adjust path as necessary
+                } elseif ($_SESSION['user_type'] === 'instructor') {
+                    $response["redirect"] = "/AcadMeter/html/instructorDashboard.php"; // Adjust path as necessary
+                } elseif ($_SESSION['user_type'] === 'student') {
+                    $response["redirect"] = "/AcadMeter/html/studentDashboard.php"; // Adjust path as necessary
+                } else {
+                    // Unknown user type
+                    $response["status"] = "error";
+                    $response["message"] = "Invalid user type.";
+                    // Optionally, destroy the session
+                    session_unset();
+                    session_destroy();
+                }
+            } else {
+                // User is not verified or approved
+                $response["status"] = "error";
+                if ($user['verified'] == 0) {
+                    $response["message"] = "Your email is not verified. Please check your email for the verification code.";
+                } else {
+                    $response["message"] = "Your account is pending admin approval.";
+                }
+            }
         } else {
             // Incorrect password
-            file_put_contents('debug_log.txt', "Password verification failed.\n", FILE_APPEND);
             $response["status"] = "error";
-            $response["message"] = "Incorrect password.";
+            $response["message"] = "Incorrect username or password.";
         }
     } else {
         // No user found
-        file_put_contents('debug_log.txt', "User not found for username/email: $username\n", FILE_APPEND);
         $response["status"] = "error";
-        $response["message"] = "User not found.";
+        $response["message"] = "Incorrect username or password.";
     }
 
     // Return the response as JSON
