@@ -1,122 +1,196 @@
 <?php
-// Start the session at the very beginning
-if (session_status() == PHP_SESSION_NONE) {
-    session_start();
-}
-
-header('Content-Type: application/json');
-
-// Include the database connection with the correct path
-include '../PHP/db_connection.php';  
-
-// Enable full error reporting for debugging (remove or adjust in production)
+// Error reporting (remove or adjust in production)
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
+include 'db_connection.php';
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception;
+
+// Include PHPMailer classes
+require 'C:/xampp/htdocs/AcadMeter/PHPMailer-master/src/Exception.php';
+require 'C:/xampp/htdocs/AcadMeter/PHPMailer-master/src/PHPMailer.php';
+require 'C:/xampp/htdocs/AcadMeter/PHPMailer-master/src/SMTP.php';
+
+header('Content-Type: application/json');
+
 $response = ["status" => "", "message" => ""];
 
-if ($_SERVER["REQUEST_METHOD"] === "POST") {
-    // Get the username, password, and userType from the POST request
-    $username = trim($_POST['username']);
-    $password = trim($_POST['password']);
-    $userType = strtolower(trim($_POST['userType']));
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    // Get user type
+    $userType = isset($_POST['userType']) ? $_POST['userType'] : null;
 
-    // Validate input
-    if (empty($username) || empty($password)) {
+    if (!$userType) {
         $response["status"] = "error";
-        $response["message"] = "Username and password are required.";
+        $response["message"] = "User type is missing.";
         echo json_encode($response);
         exit();
     }
 
-    // Prepare SQL query to fetch user based on username or email
-    $sql = "SELECT * FROM users WHERE (username = ? OR email = ?) AND LOWER(user_type) = ?";
-    $stmt = $conn->prepare($sql);
+    // Common user data
+    $username = $_POST['username_' . $userType];
+    $email = $_POST['email_' . $userType];
+    $password1 = $_POST['password1_' . $userType];
+    $password2 = $_POST['password2_' . $userType];
 
-    if ($stmt === false) {
+    // Validate passwords
+    if ($password1 !== $password2) {
         $response["status"] = "error";
-        $response["message"] = "SQL preparation failed: " . $conn->error;
+        $response["message"] = "Passwords do not match.";
         echo json_encode($response);
         exit();
     }
 
-    // Bind parameters and execute the query
-    $stmt->bind_param("sss", $username, $username, $userType);
+    // Check for duplicate username or email in users table
+    $sql_check_users = "SELECT username FROM users WHERE username = ? OR email = ?";
+    $stmt_check_users = $conn->prepare($sql_check_users);
 
-    if (!$stmt->execute()) {
+    if (!$stmt_check_users) {
         $response["status"] = "error";
-        $response["message"] = "Query execution failed: " . $stmt->error;
+        $response["message"] = "Error preparing users duplicate check statement: " . $conn->error;
         echo json_encode($response);
         exit();
     }
 
-    // Get the query result
-    $result = $stmt->get_result();
+    $stmt_check_users->bind_param("ss", $username, $email);
+    $stmt_check_users->execute();
+    $result_users = $stmt_check_users->get_result();
 
-    if ($result->num_rows === 1) {
-        // Fetch user data
-        $user = $result->fetch_assoc();
+    if ($result_users->num_rows > 0) {
+        // Duplicate found in users table
+        $response["status"] = "error";
+        $response["message"] = "Username or Email already exists. Please choose a different one.";
+        echo json_encode($response);
+        exit();
+    }
 
-        // Verify the password
-        if (password_verify($password, $user['password'])) {
-            // Check if the user is verified and approved
-            if ($user['verified'] == 1 && $user['approved'] == 1) {
-                // Password is correct and user is verified and approved, create session
-                $_SESSION['user_id'] = $user['user_id'];
-                $_SESSION['username'] = $user['username'];
-                $_SESSION['user_type'] = strtolower($user['user_type']);
+    // Check for duplicate username or email in pending_users table
+    $sql_check_pending = "SELECT username FROM pending_users WHERE username = ? OR email = ?";
+    $stmt_check_pending = $conn->prepare($sql_check_pending);
 
-                // Regenerate session ID for security
-                session_regenerate_id(true);
+    if (!$stmt_check_pending) {
+        $response["status"] = "error";
+        $response["message"] = "Error preparing pending_users duplicate check statement: " . $conn->error;
+        echo json_encode($response);
+        exit();
+    }
 
-                // Set success response
-                $response["status"] = "success";
-                $response["message"] = "Login successful!";
+    $stmt_check_pending->bind_param("ss", $username, $email);
+    $stmt_check_pending->execute();
+    $result_pending = $stmt_check_pending->get_result();
 
-                // Set redirect URL based on user type
-                if ($_SESSION['user_type'] === 'admin') {
-                    $response["redirect"] = "/AcadMeter/php/admin_dashboard.php"; // Adjust path as necessary
-                } elseif ($_SESSION['user_type'] === 'instructor') {
-                    $response["redirect"] = "/AcadMeter/html/instructorDashboard.php"; // Adjust path as necessary
-                } elseif ($_SESSION['user_type'] === 'student') {
-                    $response["redirect"] = "/AcadMeter/html/studentDashboard.php"; // Adjust path as necessary
-                } else {
-                    // Unknown user type
-                    $response["status"] = "error";
-                    $response["message"] = "Invalid user type.";
-                    // Optionally, destroy the session
-                    session_unset();
-                    session_destroy();
-                }
-            } else {
-                // User is not verified or approved
-                $response["status"] = "error";
-                if ($user['verified'] == 0) {
-                    $response["message"] = "Your email is not verified. Please check your email for the verification code.";
-                } else {
-                    $response["message"] = "Your account is pending admin approval.";
-                }
-            }
-        } else {
-            // Incorrect password
-            $response["status"] = "error";
-            $response["message"] = "Incorrect username or password.";
-        }
+    if ($result_pending->num_rows > 0) {
+        // Duplicate found in pending_users table
+        $response["status"] = "error";
+        $response["message"] = "An account with this username or email is pending verification. Please check your email for verification instructions.";
+        echo json_encode($response);
+        exit();
+    }
+
+    // Close duplicate check statements
+    $stmt_check_users->close();
+    $stmt_check_pending->close();
+
+    // Hash the password
+    $passwordHash = password_hash($password1, PASSWORD_BCRYPT);
+
+    // Generate a 6-digit OTP verification code
+    $verification_code = str_pad(rand(0, 999999), 6, '0', STR_PAD_LEFT);  // Ensures 6 digits with leading zeros if necessary
+
+    // Prepare data for insertion into pending_users
+    $name = ''; $number = ''; $position_program = ''; $gender = ''; $dob = '';
+
+    // Collect specific user type data
+    if ($userType == 'admin') {
+        $name = $_POST['admin_name'];
+        $number = $_POST['admin_number'];
+        $position_program = $_POST['admin_position'];
+        $gender = $_POST['gender_admin'];
+        $dob = $_POST['date_of_birth_admin'];
+    } elseif ($userType == 'instructor') {
+        $name = $_POST['instructor_name'];
+        $number = $_POST['instructor_number'];
+        $position_program = $_POST['instructor_position'];
+        $gender = $_POST['gender_instructor'];
+        $dob = $_POST['date_of_birth_instructor'];
+    } elseif ($userType == 'student') {
+        $name = $_POST['student_name'];
+        $number = $_POST['student_number'];
+        $position_program = $_POST['student_program'];
+        $gender = $_POST['gender_student'];
+        $dob = $_POST['date_of_birth_student'];
     } else {
-        // No user found
         $response["status"] = "error";
-        $response["message"] = "Incorrect username or password.";
+        $response["message"] = "Invalid user type.";
+        echo json_encode($response);
+        exit();
     }
 
-    // Return the response as JSON
-    echo json_encode($response);
+    // Insert into pending_users table
+    $sql_pending_user = "INSERT INTO pending_users (username, password, email, user_type, verification_code, name, number, position_program, gender, date_of_birth) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    $stmt_pending_user = $conn->prepare($sql_pending_user);
 
-    // Close the statement and connection
-    $stmt->close();
+    if (!$stmt_pending_user) {
+        $response["status"] = "error";
+        $response["message"] = "Error preparing pending user insert statement: " . $conn->error;
+        echo json_encode($response);
+        exit();
+    }
+
+    $stmt_pending_user->bind_param("ssssssssss", $username, $passwordHash, $email, $userType, $verification_code, $name, $number, $position_program, $gender, $dob);
+
+    if ($stmt_pending_user->execute()) {
+        // Send verification email using PHPMailer
+        $mail = new PHPMailer(true);
+        try {
+            // Server settings
+            $mail->isSMTP();
+            $mail->Host = 'smtp.gmail.com';
+            $mail->SMTPAuth = true;
+            $mail->Username = ''; // Your Gmail
+            $mail->Password = ''; // Your Gmail app pw 
+            $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+            $mail->Port = 587;
+
+            // Recipients
+            $mail->setFrom('your_email@gmail.com', 'AcadMeter Team');
+            $mail->addAddress($email); // Send the email to the user's email address
+
+            // Content
+            $mail->isHTML(true);
+            $mail->Subject = 'Email Verification Code';
+            $mail->Body    = "Hi $name,<br><br>
+                              Thank you for registering.<br>
+                              Please use the following verification code to verify your email address:<br><br>
+                              <strong>$verification_code</strong><br><br>
+                              Visit the following link to enter your code:<br>
+                              <a href='http://localhost/AcadMeter/html/verificationAccount.html'>Verify Email</a><br><br>
+                              Thanks!<br>AcadMeter Team";
+
+            $mail->send();
+            $response["status"] = "success";
+            $response["message"] = "Registration successful! A verification email has been sent to your email address.";
+            $response["redirect"] = "../html/verificationAccount.html"; // Add redirect URL
+        } catch (Exception $e) {
+            $response["status"] = "error";
+            $response["message"] = "Message could not be sent. Mailer Error: {$mail->ErrorInfo}";
+        }
+        echo json_encode($response);
+        exit();
+    } else {
+        $response["status"] = "error";
+        $response["message"] = "Error: " . $stmt_pending_user->error;
+        echo json_encode($response);
+        exit();
+    }
+
+    // Close statements and connection
+    $stmt_pending_user->close();
     $conn->close();
 } else {
     $response["status"] = "error";
     $response["message"] = "Invalid request method.";
     echo json_encode($response);
+    exit();
 }
