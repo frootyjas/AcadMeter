@@ -2,15 +2,19 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Verify Account</title>
     <link rel="stylesheet" href="../css/verifyAccount.css">
 </head>
 <body>
     <div class="container">
         <h1>Verify your Account</h1>
-        <p>We've sent a one-time password to your email. Type it below to continue.</p>
+        <p>We've sent a verification code to your email. Enter it below to continue.</p>
         <form id="verificationForm" onsubmit="handleVerification(event)">
+            <div class="data">
+                <label for="email">Enter your email:</label>
+                <input type="email" id="email" name="email" placeholder="Enter your email" required>
+                <div id="email-error" class="error-message"></div>
+            </div>
             <div class="data">
                 <label for="verification-code">Enter your verification code:</label>
                 <input type="text" id="verification-code" name="verification_code" placeholder="Enter your verification code" required>
@@ -20,43 +24,51 @@
                 <span class="btnText">Verify</span>
             </button>
             <div id="responseMessage" class="text-center mt-3"></div>
-            
+            <!-- Initially hidden button to go back to sign in -->
             <a id="goHomeButton" href="/AcadMeter/html/signIn.html" style="display:none;" class="btn btn-primary mt-3">Go Back to Sign In</a>
         </form>
     </div>
 
     <script>
         function handleVerification(event) {
-            event.preventDefault();  
+            event.preventDefault();  // Prevent default form submission
 
+            const email = document.getElementById('email').value;
             const verificationCode = document.getElementById('verification-code').value;
             const responseMessage = document.getElementById('responseMessage');
-            const errorMessage = document.getElementById('verification-code-error');
+            const emailError = document.getElementById('email-error');
+            const codeError = document.getElementById('verification-code-error');
             const goHomeButton = document.getElementById('goHomeButton');
 
+            // Clear previous messages
+            emailError.textContent = "";
+            codeError.textContent = "";
+            responseMessage.textContent = "";
+            goHomeButton.style.display = "none"; // Hide the button initially
+
+            // Validate input
+            if (!email) {
+                emailError.textContent = "Please enter your email.";
+                return;
+            }
             if (!verificationCode) {
-                errorMessage.textContent = "Please enter your verification code.";
+                codeError.textContent = "Please enter your verification code.";
                 return;
             }
 
-            
-            errorMessage.textContent = "";
-            responseMessage.textContent = "";
-            goHomeButton.style.display = "none"; /
-
-            
-            fetch('../PHP/verifyAccount.php', {
+            // Send verification code and email to the server via AJAX
+            fetch('../PHP/verify.php', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ verification_code: verificationCode })
+                body: JSON.stringify({ email: email, verification_code: verificationCode })
             })
             .then(response => response.json())
             .then(data => {
                 if (data.status === 'success') {
                     responseMessage.innerHTML = `<span class="text-success">${data.message}</span>`;
-                    goHomeButton.style.display = "block";  
+                    goHomeButton.style.display = "block";  // Show the "Go Back" button after success
                 } else {
                     responseMessage.innerHTML = `<span class="text-danger">${data.message}</span>`;
                 }
